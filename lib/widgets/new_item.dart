@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 /* 222. Adding the http Package
 La palabra clave "as" le dice a Dart que todo el contenido que es proporcionado 
@@ -34,8 +36,10 @@ class _NewItemState extends State<NewItem> {
   var _enteredName = '';
   var _enteredQuantity = 1;
   var _selectedCategory = categories[Categories.vegetables]!;
+  //VIDEO #227. Managing the Loading State
+  var _isSending = false;
 
-  void _saveItem() {
+  void _saveItem() async {
     /* VIDEO #213. Getting Form Access via a Global Key
     El objetivo de esta funcion es activar la validación. Lo podemos hacer ya
     que _formKey está conectada al formulario y desde ella, podemos acceder a la
@@ -53,17 +57,81 @@ class _NewItemState extends State<NewItem> {
     Al llamar el método guardar, se activará una función especial en todos estos
     widgets de campo formulario dentro del formulario */
       _formKey.currentState!.save();
-      /* 215. Passing Data Between Screens
-      Recordar que para cerrar esta pantalla y pasar los valores a dicha 
-      pantalla, usamos .pop y en el argumento debemos enviar la infomación */
+      /* VIDEO #227. Managing the Loading State */
+      setState(() {
+        _isSending = true;
+      });
+      /* VIDEO #223. Sending a POST Request to the Backend
+      Vamos a usar la URL de Firebase */
+      final url = Uri.https('flutter-prep-8ab88-default-rtdb.firebaseio.com',
+          'shopping-list.json');
+      /* VIDEO #224. Working with the Request & Waiting for the Response
+      como estamos enviando un petición http, no sabemos el tiempo en que se 
+      demorará esta petición. Además, el type post es un FUTURO, lo cual es 
+      perfecto para esta situación, ya que podemos ejecutar THEN. Donde podremos
+      trabajar con esa respuesta o podemos escribir ASYNC en el método 
+      _saveItem. 
+      Es decir, obtenemos nuestra respuesta response y esperaremos (await) a 
+      este ciclo de solicitud y respuesta termine antes de que estos datos estén
+      disponibles y antes de que la siguiente línea de código sea ejecutada por 
+      Dart*/
+      final response = await http.post(
+        url,
+        headers: {
+          //Como se formatearán los datos que le estamos enviando
+          'Content-Type': 'application/json',
+        },
+        /* En body, se deben adjuntar los dato para la petición saliente. No 
+        necesitamos enviar ID, ya que Firebase generará un ID único para 
+        todos.*/
+        body: json.encode(
+          {
+            'name': _enteredName,
+            'quantity': _enteredQuantity,
+            'category': _selectedCategory.title,
+          },
+        ),
+      );
+      /* VIDEO #226. Avoiding Unnecessary Requests
+       */
+      final Map<String, dynamic> resData = json.decode(response.body);
+      /////////////////////////////////////////////////////////////////////////)
+      /* 224. Working with the Request & Waiting for the Response */
+      print(response.body);
+      print(response.statusCode);
+      /* Aquí estaré recibiendo una advertencia, no debo tratar de usar 
+      BuildContext a través de lagunas async. Esto significa que despúes de 
+      AWAIT, Flutter no sabe con certeza si el contexto sigue siendo el mismo 
+      que antes. Por eso, en el argumento .of no se recomienda usar la palabra 
+      context. Para solucionar esto, usaremos el siguiente condicional, donde se
+      estará comprobando si no estamos montados en el contexto correspondiente*/
+      if (!context.mounted) {
+        /*Estaremos verificando que es FALSE. Esto significa que si este widget 
+        al que pertenece este contexto ya no forma parte de la pantalla, hacemos
+        un return y no ejecutamos el código: Navigator.of(context).pop()*/
+        return;
+      }
       Navigator.of(context).pop(
         GroceryItem(
-          id: DateTime.now().toString(),
+          id: resData['name'],
           name: _enteredName,
           quantity: _enteredQuantity,
           category: _selectedCategory,
         ),
       );
+      //////////////////////////////////////////////////////////////////////////
+
+      /* 215. Passing Data Between Screens
+      Recordar que para cerrar esta pantalla y pasar los valores a dicha 
+      pantalla, usamos .pop y en el argumento debemos enviar la infomación */
+      // Navigator.of(context).pop(
+      //   GroceryItem(
+      //     id: DateTime.now().toString(),
+      //     name: _enteredName,
+      //     quantity: _enteredQuantity,
+      //     category: _selectedCategory,
+      //   ),
+      // );
     }
   }
 
@@ -210,14 +278,40 @@ class _NewItemState extends State<NewItem> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton(
-                    onPressed: () {
-                      _formKey.currentState!.reset();
-                    },
+                    /* VIDEO #227. Managing the Loading State
+                    Cuando la información se está guardando y posterior, se está
+                    realizando la petición HTTP, debemos deshabilitar este 
+                    botón, ya que puede haber un rango de tiempo de espera hasta 
+                    que finalice la operación anterior. Ya que si se presiona 
+                    este botón en el proceso, pueden haber acumulación de 
+                    peticiones HTTP. Por lo cual usaremos una condición por 
+                    medio de una expresión terniaria, si _isSending es NULL 
+                    bloquerá el botón */
+                    onPressed: _isSending
+                        ? null
+                        : () {
+                            _formKey.currentState!.reset();
+                          },
                     child: const Text('Reset'),
                   ),
                   ElevatedButton(
-                    onPressed: _saveItem,
-                    child: const Text('Add item'),
+                    /* VIDEO #227. Managing the Loading State
+                    Cuando la información se está guardando y posterior, se está
+                    realizando la petición HTTP, debemos deshabilitar este 
+                    botón, ya que puede haber un rango de tiempo de espera hasta 
+                    que finalice la operación anterior. Ya que si se presiona 
+                    este botón en el proceso, pueden haber acumulación de 
+                    peticiones HTTP. Por lo cual usaremos una condición por 
+                    medio de una expresión terniaria, si _isSending es NULL 
+                    bloquerá el botón */
+                    onPressed: _isSending ? null : _saveItem,
+                    child: _isSending
+                        ? const SizedBox(
+                            height: 16,
+                            width: 16,
+                            child: CircularProgressIndicator(),
+                          )
+                        : const Text('Add item'),
                   ),
                 ],
               ),

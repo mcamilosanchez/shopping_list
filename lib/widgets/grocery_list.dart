@@ -1,4 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+/* 222. Adding the http Package
+La palabra clave "as" le dice a Dart que todo el contenido que es proporcionado 
+por este paquete debe ser agrupado en el objeto nombrado "http" (puede tener 
+cualquier nombre) */
+import 'package:http/http.dart' as http;
+import 'package:shopping_list/data/categories.dart';
 import 'package:shopping_list/models/grocery_item.dart';
 import 'package:shopping_list/widgets/new_item.dart';
 
@@ -12,37 +20,80 @@ class GroceryList extends StatefulWidget {
 }
 
 class _GroceryListState extends State<GroceryList> {
-  /* 215. Passing Data Between Screens */
-  final List<GroceryItem> _groceryItems = [];
-  /* 215. Passing Data Between Screens
-  Al momento de cerrar la pantalla NewItem por medio de .pop, llega la 
-  información del nuevo item. Para eso, debemos escribir async en el método 
-  _addItem() y await para recuperar los datos. newItem puede ser un VALOR NULO, 
-  ya que el usuario puede salir de la pantalla presionando la tecla atrás sin 
-  haber guardado */
+  List<GroceryItem> _groceryItems = [];
+
+  var _isLoading = true;
+
+  /* 225. Fetching & Transforming Data
+  Recordar que initState es un método que permite realizar algunas tareas de 
+  inicialización. Y el trabajo de inicialización que quiero hacer aquí, es 
+  ENVIAR MI SOLICITUD, es decir, listar los items. */
+  @override
+  void initState() {
+    super.initState();
+    _loadItems();
+  }
+
+  /* 225. Fetching & Transforming Data */
+  void _loadItems() async {
+    /* VIDEO #225. Fetching & Transforming Data
+    Aquí volvimos de la navegación, podemos y debemos crear una nueva URL */
+    final url = Uri.https(
+        'flutter-prep-8ab88-default-rtdb.firebaseio.com', 'shopping-list.json');
+    /* Recordar que get es para obtener datos, no para enviarlos */
+    final response = await http.get(url);
+    //print('Get response: ${response.body}');
+    /*225. Fetching & Transforming Data 
+    Aquí vamos a convertir los datos de response JSON a objetos y lo 
+    almacenaremos en listData el cuál será un valor DINÁMICO y como las 
+    respuestas json se parece a un map, definiremos listData como un map. Por 
+    último, la convertiremos en una List<GroceryItem>.
+    Se tiene que mirar response en la consola para poder entender el siguiente 
+    código: final Map<String, Map<String, dynamic>>*/
+    final List<GroceryItem> loadedItems = [];
+    final Map<String, dynamic> listData = json.decode(response.body);
+    for (final item in listData.entries) {
+      /* Lo que estamos haciendo en la variable local category, no hay necesidad
+      de hacerlo siempre, se hace en este caso particular ya que quiero hacer 
+      más cosas con esta propiedad. De igual manera, ver video si hay duda*/
+      final category = categories.entries
+          .firstWhere(
+              (catItem) => catItem.value.title == item.value['category'])
+          .value;
+      loadedItems.add(
+        GroceryItem(
+          id: item.key,
+          name: item.value['name'],
+          quantity: item.value['quantity'],
+          category: category,
+        ),
+      );
+    }
+    setState(() {
+      _groceryItems = loadedItems;
+      _isLoading = false;
+    });
+  }
+
   void _addItem() async {
+    /* VIDEO #225. Fetching & Transforming Data
+    Aquí ya no estamos recibiendo datos del pop, ya que lo estaremos realizando 
+    desde peticiones http */
+    /* VIDEO #226. Avoiding Unnecessary Requests
+    Pero ahora en este video, si estamos recibiendo la información del request */
     final newItem = await Navigator.of(context).push<GroceryItem>(
       MaterialPageRoute(
         builder: (ctx) => const NewItem(),
       ),
     );
-    /* Entonces, como newItem puede ser nulo, realizamos lo siguiente: */
     if (newItem == null) {
       return;
     }
-    /* Si se salta el condicional, es porque se tiene un nuevo elemento, 
-    entonces debe ser agregado a la _groceryItems. Podemos hacerlo de la 
-    siguiente manera:
-
-    _groceryItems = newItem;
-
-    Peor sería un error ya que _groceryItems en final. Por lo anterior, 
-    usaremos add() */
     setState(() {
-      /* Llamamos setState ya que queremos ejecutar el método build de nuevo 
-      porque ahora quiero usar artículos de comestibles en mi UI*/
       _groceryItems.add(newItem);
     });
+    /* VIDEO #225. Fetching & Transforming Data */
+    // _loadItems();
   }
 
   void _removedItem(GroceryItem item) {
@@ -63,6 +114,13 @@ class _GroceryListState extends State<GroceryList> {
         ],
       ),
     );
+    /* VIDEO #227. Managing the Loading State */
+    if (_isLoading) {
+      content = const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     if (_groceryItems.isNotEmpty) {
       content = ListView.builder(
         itemCount: _groceryItems.length,
