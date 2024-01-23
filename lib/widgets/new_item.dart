@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+/* 222. Adding the http Package
+La palabra clave "as" le dice a Dart que todo el contenido que es proporcionado 
+por este paquete debe ser agrupado en el objeto nombrado "http" (puede tener 
+cualquier nombre) */
+import 'package:http/http.dart' as http;
 import 'package:shopping_list/data/categories.dart';
 import 'package:shopping_list/models/category.dart';
 import 'package:shopping_list/models/grocery_item.dart';
