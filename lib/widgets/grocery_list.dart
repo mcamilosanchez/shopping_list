@@ -23,6 +23,7 @@ class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
 
   var _isLoading = true;
+  String? _error;
 
   /* 225. Fetching & Transforming Data
   Recordar que initState es un método que permite realizar algunas tareas de 
@@ -42,6 +43,16 @@ class _GroceryListState extends State<GroceryList> {
         'flutter-prep-8ab88-default-rtdb.firebaseio.com', 'shopping-list.json');
     /* Recordar que get es para obtener datos, no para enviarlos */
     final response = await http.get(url);
+    /* VIDEO #228. Error Response Handling
+    Podemos avergiguar si la petición fue realizada correctamente, si es > 400 
+    es un error. Entonces */
+    if (response.statusCode >= 400) {
+      /* Habría un error.
+      Debo asegurarme que la UI se actualice si se produce un error. */
+      setState(() {
+        _error = 'Failed to fetch data. Please try again later. ';
+      });
+    }
     //print('Get response: ${response.body}');
     /*225. Fetching & Transforming Data 
     Aquí vamos a convertir los datos de response JSON a objetos y lo 
@@ -142,6 +153,14 @@ class _GroceryListState extends State<GroceryList> {
             ),
           ),
         ),
+      );
+    }
+
+    /* 228. Error Response Handling */
+    if (_error != null) {
+      //Hay un error, entonces:
+      content = Center(
+        child: Text(_error!),
       );
     }
 
