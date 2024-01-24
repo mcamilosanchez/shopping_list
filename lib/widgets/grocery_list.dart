@@ -107,10 +107,33 @@ class _GroceryListState extends State<GroceryList> {
     // _loadItems();
   }
 
-  void _removedItem(GroceryItem item) {
+  void _removedItem(GroceryItem item) async {
+    final index = _groceryItems.indexOf(item);
     setState(() {
       _groceryItems.remove(item);
     });
+    /* VIDEO #229. Sending DELETE Requests
+    Para eliminar un item desde la BD de Firebase, necesito un ID. Por lo cual, 
+    debemos incluir el ID del item que queremos eliminar en la URL, ya que si no
+    lo hacemos pordríamos eliminar toda la lista.
+    Es importante saber si esta petición se ejecutó exitosamente, ya que si 
+    no se verifica, puede haber un error en la eliminación del item y pueda que 
+    aparezca de nuevo en la lista. Por lo cual usaremos ASYNC en el método */
+    final url = Uri.https('flutter-prep-8ab88-default-rtdb.firebaseio.com',
+        'shopping-list/${item.id}.json');
+    final response = await http.delete(url);
+    if (response.statusCode >= 400) {
+      //Optional: Show error message
+      /* Hubo un error en la petición delete. Por lo anterior, vamos a deshacer 
+      esta eliminación: _groceryItems.remove(item). Lo haremos de la siguiente 
+      manera: */
+      setState(() {
+        /*Recordar que INSERT, es un método incorporado por DART que se puede 
+        usar en cualquier lista para agregar un elemento (item) en un específico
+        índice (index) en la lista. */
+        _groceryItems.insert(index, item);
+      });
+    }
   }
 
   @override
