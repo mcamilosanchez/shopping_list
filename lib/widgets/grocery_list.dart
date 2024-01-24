@@ -54,6 +54,19 @@ class _GroceryListState extends State<GroceryList> {
       });
     }
     //print('Get response: ${response.body}');
+    /* VIDEO #230. Handling the "No Data" Case
+    El problema aquí es que si no tengo elementos en la respuesta Firebase, el 
+    body no producirá el map listData. Por lo tanto, añadiremos la siguiente 
+    comprobación: */
+    if (response.body == 'null') {
+      //Esto significa que no tenemos nada en el backend y no ejecutaremos más
+      //código, por eso escribimos el return y restablecemos el estado.
+      setState(() {
+        _isLoading = false;
+      });
+      return;
+    }
+    ////////////////////////////////////////////////////////////////////////////
     /*225. Fetching & Transforming Data 
     Aquí vamos a convertir los datos de response JSON a objetos y lo 
     almacenaremos en listData el cuál será un valor DINÁMICO y como las 
@@ -61,8 +74,8 @@ class _GroceryListState extends State<GroceryList> {
     último, la convertiremos en una List<GroceryItem>.
     Se tiene que mirar response en la consola para poder entender el siguiente 
     código: final Map<String, Map<String, dynamic>>*/
-    final List<GroceryItem> loadedItems = [];
     final Map<String, dynamic> listData = json.decode(response.body);
+    final List<GroceryItem> loadedItems = [];
     for (final item in listData.entries) {
       /* Lo que estamos haciendo en la variable local category, no hay necesidad
       de hacerlo siempre, se hace en este caso particular ya que quiero hacer 
