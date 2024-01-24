@@ -41,62 +41,76 @@ class _GroceryListState extends State<GroceryList> {
     Aquí volvimos de la navegación, podemos y debemos crear una nueva URL */
     final url = Uri.https(
         'flutter-prep-8ab88-default-rtdb.firebaseio.com', 'shopping-list.json');
-    /* Recordar que get es para obtener datos, no para enviarlos */
-    final response = await http.get(url);
-    /* VIDEO #228. Error Response Handling
-    Podemos avergiguar si la petición fue realizada correctamente, si es > 400 
-    es un error. Entonces */
-    if (response.statusCode >= 400) {
-      /* Habría un error.
+
+    /* VIDEO #231. Better Error Handling
+    Pueden aparecer errores no generados por el backend, por ejemplo si no hay 
+    internet o si se escribió mal la dirección de la url. En este caso, los 
+    podemos manejar con TRY & CATCH: */
+    try {
+      /* Recordar que get es para obtener datos, no para enviarlos */
+      final response = await http.get(url);
+      /* VIDEO #228. Error Response Handling
+      Podemos avergiguar si la petición fue realizada correctamente, si es > 400 
+      es un error. Entonces */
+      if (response.statusCode >= 400) {
+        /* Habría un error.
       Debo asegurarme que la UI se actualice si se produce un error. */
+        setState(() {
+          _error = 'Failed to fetch data. Please try again later. ';
+        });
+      }
+      //print('Get response: ${response.body}');
+      /* VIDEO #230. Handling the "No Data" Case
+      El problema aquí es que si no tengo elementos en la respuesta Firebase, el 
+      body no producirá el map listData. Por lo tanto, añadiremos la siguiente 
+      comprobación: */
+      if (response.body == 'null') {
+        //Esto significa que no tenemos nada en el backend y no ejecutaremos más
+        //código, por eso escribimos el return y restablecemos el estado.
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+      //////////////////////////////////////////////////////////////////////////
+      /*225. Fetching & Transforming Data 
+      Aquí vamos a convertir los datos de response JSON a objetos y lo 
+      almacenaremos en listData el cuál será un valor DINÁMICO y como las 
+      respuestas json se parece a un map, definiremos listData como un map. Por 
+      último, la convertiremos en una List<GroceryItem>.
+      Se tiene que mirar response en la consola para poder entender el siguiente 
+      código: final Map<String, Map<String, dynamic>>*/
+      final Map<String, dynamic> listData = json.decode(response.body);
+      final List<GroceryItem> loadedItems = [];
+      for (final item in listData.entries) {
+        /* Lo que estamos haciendo en la variable local category, no hay 
+        necesidad de hacerlo siempre, se hace en este caso particular ya que 
+        quiero hacer más cosas con esta propiedad. De igual manera, ver video 
+        si hay duda*/
+        final category = categories.entries
+            .firstWhere(
+                (catItem) => catItem.value.title == item.value['category'])
+            .value;
+        loadedItems.add(
+          GroceryItem(
+            id: item.key,
+            name: item.value['name'],
+            quantity: item.value['quantity'],
+            category: category,
+          ),
+        );
+      }
       setState(() {
-        _error = 'Failed to fetch data. Please try again later. ';
-      });
-    }
-    //print('Get response: ${response.body}');
-    /* VIDEO #230. Handling the "No Data" Case
-    El problema aquí es que si no tengo elementos en la respuesta Firebase, el 
-    body no producirá el map listData. Por lo tanto, añadiremos la siguiente 
-    comprobación: */
-    if (response.body == 'null') {
-      //Esto significa que no tenemos nada en el backend y no ejecutaremos más
-      //código, por eso escribimos el return y restablecemos el estado.
-      setState(() {
+        _groceryItems = loadedItems;
         _isLoading = false;
       });
-      return;
+    } catch (error) {
+      /* Este objeto "error" podría contener información útil respecto al error,
+      información más detallada */
+      setState(() {
+        _error = 'Something went wrong!. Please try again later. ';
+      });
     }
-    ////////////////////////////////////////////////////////////////////////////
-    /*225. Fetching & Transforming Data 
-    Aquí vamos a convertir los datos de response JSON a objetos y lo 
-    almacenaremos en listData el cuál será un valor DINÁMICO y como las 
-    respuestas json se parece a un map, definiremos listData como un map. Por 
-    último, la convertiremos en una List<GroceryItem>.
-    Se tiene que mirar response en la consola para poder entender el siguiente 
-    código: final Map<String, Map<String, dynamic>>*/
-    final Map<String, dynamic> listData = json.decode(response.body);
-    final List<GroceryItem> loadedItems = [];
-    for (final item in listData.entries) {
-      /* Lo que estamos haciendo en la variable local category, no hay necesidad
-      de hacerlo siempre, se hace en este caso particular ya que quiero hacer 
-      más cosas con esta propiedad. De igual manera, ver video si hay duda*/
-      final category = categories.entries
-          .firstWhere(
-              (catItem) => catItem.value.title == item.value['category'])
-          .value;
-      loadedItems.add(
-        GroceryItem(
-          id: item.key,
-          name: item.value['name'],
-          quantity: item.value['quantity'],
-          category: category,
-        ),
-      );
-    }
-    setState(() {
-      _groceryItems = loadedItems;
-      _isLoading = false;
-    });
   }
 
   void _addItem() async {
