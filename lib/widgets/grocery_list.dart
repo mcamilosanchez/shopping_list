@@ -25,7 +25,6 @@ class _GroceryListState extends State<GroceryList> {
   //var _isLoading = true;
   /* VIDEO #233. Using the FutureBuilder Widget */
   late Future<List<GroceryItem>> _loadedItems;
-  String? _error;
 
   /* 225. Fetching & Transforming Data
   Recordar que initState es un método que permite realizar algunas tareas de 
